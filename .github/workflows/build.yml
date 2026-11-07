@@ -12,11 +12,20 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - run: npm install
-      - run: npx cap add android && npx cap sync android
+      - run: npx cap add android
+      - name: Icon and splash
+        run: npx capacitor-assets generate --android --iconBackgroundColor '#262624' --splashBackgroundColor '#262624'
+      - name: Portrait only, documents access
+        run: |
+          sed -i 's/android:name=".MainActivity"/android:name=".MainActivity" android:screenOrientation="portrait"/' android/app/src/main/AndroidManifest.xml
+          sed -i 's#<application#<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>\n    <application#' android/app/src/main/AndroidManifest.xml
+      - run: npx cap sync android
+      - name: Same signing key every build (so updates install over the old app)
+        run: mkdir -p ~/.android && cp debug.keystore ~/.android/debug.keystore
       - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
-        with: { name: RacingDynasty-apk, path: android/app/build/outputs/apk/debug/*.apk }
       - run: cp android/app/build/outputs/apk/debug/app-debug.apk RacingDynasty.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: RacingDynasty-apk, path: RacingDynasty.apk }
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
